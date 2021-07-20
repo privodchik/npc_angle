@@ -40,12 +40,11 @@ CIntegrator* p_angleSelfRef;
 void acs_angle_Start_wrapper(const real_T *_Ts, const int_T p_width0)
 {
 /* %%%-SFUNWIZ_wrapper_Start_Changes_BEGIN --- EDIT HERE TO _END */
-p_angleRemote = new CIntegrator(_Ts[0], PERIOD/_2PI, _2PI, -_2PI);
+p_angleRemote = new CIntegrator(_Ts[0], PERIOD/_2PI, _2PI, 0);
 p_angleRemote->config_set();
 
-p_angleSelfRef = new CIntegrator(_Ts[0], PERIOD/_2PI, _2PI, -_2PI);
+p_angleSelfRef = new CIntegrator(_Ts[0], PERIOD/_2PI, _2PI, 0);
 p_angleSelfRef->config_set();
-
 /* %%%-SFUNWIZ_wrapper_Start_Changes_END --- EDIT HERE TO _BEGIN */
 }
 /*
@@ -65,12 +64,9 @@ _angle += rand[0];
 float _angleSelf = p_angleSelfRef->out_est(1.0);
 
 auto f = [](float& _angle){
-    if (_angle > _PI){
-    _angle = -_PI + (_angle - _PI);
+    if (_angle >= _2PI){
+    _angle = _angle - _2PI;
     } 
-    else if (_angle < -_PI){
-        _angle = -_PI - _angle;
-    }
 };
 
 f(_angle);
@@ -85,7 +81,6 @@ p_angleSelfRef->out_set(_angleSelf);
 
 RemoteQ[0] = p_angleRemote->out_get();
 SelfQ[0] = p_angleSelfRef->out_get();
-
 /* %%%-SFUNWIZ_wrapper_Outputs_Changes_END --- EDIT HERE TO _BEGIN */
 }
 
