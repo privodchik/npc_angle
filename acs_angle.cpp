@@ -26,14 +26,14 @@
  * | See matlabroot/simulink/src/sfuntmpl_doc.c for a more detailed template |
  *  ------------------------------------------------------------------------- 
  *
- * Created: Mon Jul 19 21:14:57 2021
+ * Created: Tue Jul 20 10:49:38 2021
  */
 
 #define S_FUNCTION_LEVEL 2
 #define S_FUNCTION_NAME acs_angle
 /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<*/
 /* %%%-SFUNWIZ_defines_Changes_BEGIN --- EDIT HERE TO _END */
-#define NUM_INPUTS            1
+#define NUM_INPUTS            2
 /* Input Port  0 */
 #define IN_PORT_0_NAME        rand
 #define INPUT_0_WIDTH         1
@@ -51,10 +51,27 @@
 #define IN_0_FRACTIONLENGTH   9
 #define IN_0_BIAS             0
 #define IN_0_SLOPE            0.125
+/* Input Port  1 */
+#define IN_PORT_1_NAME        errQ
+#define INPUT_1_WIDTH         1
+#define INPUT_DIMS_1_COL      1
+#define INPUT_1_DTYPE         real_T
+#define INPUT_1_COMPLEX       COMPLEX_NO
+#define IN_1_FRAME_BASED      FRAME_NO
+#define IN_1_BUS_BASED        0
+#define IN_1_BUS_NAME         
+#define IN_1_DIMS             1-D
+#define INPUT_1_FEEDTHROUGH   1
+#define IN_1_ISSIGNED         0
+#define IN_1_WORDLENGTH       8
+#define IN_1_FIXPOINTSCALING  1
+#define IN_1_FRACTIONLENGTH   9
+#define IN_1_BIAS             0
+#define IN_1_SLOPE            0.125
 
-#define NUM_OUTPUTS           1
+#define NUM_OUTPUTS           2
 /* Output Port  0 */
-#define OUT_PORT_0_NAME       y0
+#define OUT_PORT_0_NAME       RemoteQ
 #define OUTPUT_0_WIDTH        1
 #define OUTPUT_DIMS_0_COL     1
 #define OUTPUT_0_DTYPE        real_T
@@ -69,6 +86,22 @@
 #define OUT_0_FRACTIONLENGTH  3
 #define OUT_0_BIAS            0
 #define OUT_0_SLOPE           0.125
+/* Output Port  1 */
+#define OUT_PORT_1_NAME       SelfQ
+#define OUTPUT_1_WIDTH        1
+#define OUTPUT_DIMS_1_COL     1
+#define OUTPUT_1_DTYPE        real_T
+#define OUTPUT_1_COMPLEX      COMPLEX_NO
+#define OUT_1_FRAME_BASED     FRAME_NO
+#define OUT_1_BUS_BASED       0
+#define OUT_1_BUS_NAME        
+#define OUT_1_DIMS            1-D
+#define OUT_1_ISSIGNED        1
+#define OUT_1_WORDLENGTH      8
+#define OUT_1_FIXPOINTSCALING 1
+#define OUT_1_FRACTIONLENGTH  3
+#define OUT_1_BIAS            0
+#define OUT_1_SLOPE           0.125
 
 #define NPARAMS               1
 /* Parameter 0 */
@@ -82,7 +115,7 @@
 #define NUM_CONT_STATES       0
 #define CONT_STATES_IC        [0]
 
-#define SFUNWIZ_GENERATE_TLC  0
+#define SFUNWIZ_GENERATE_TLC  1
 #define SOURCEFILES           "__SFB__TF/itrans_func.cpp__SFB__TF/integrator.cpp"
 #define PANELINDEX            8
 #define USE_SIMSTRUCT         0
@@ -101,8 +134,11 @@
 
 extern void acs_angle_Start_wrapper(const real_T *_Ts, const int_T p_width0);
 extern void acs_angle_Outputs_wrapper(const real_T *rand,
-			real_T *y0,
+			const real_T *errQ,
+			real_T *RemoteQ,
+			real_T *SelfQ,
 			const real_T *_Ts, const int_T p_width0);
+extern void acs_angle_Terminate_wrapper(const real_T *_Ts, const int_T p_width0);
 /*====================*
  * S-function methods *
  *====================*/
@@ -185,12 +221,23 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortDirectFeedThrough(S, 0, INPUT_0_FEEDTHROUGH);
     ssSetInputPortRequiredContiguous(S, 0, 1); /*direct input signal access*/
 
+    /* Input Port 1 */
+    ssSetInputPortWidth(S, 1, INPUT_1_WIDTH);
+    ssSetInputPortDataType(S, 1, SS_DOUBLE);
+    ssSetInputPortComplexSignal(S, 1, INPUT_1_COMPLEX);
+    ssSetInputPortDirectFeedThrough(S, 1, INPUT_1_FEEDTHROUGH);
+    ssSetInputPortRequiredContiguous(S, 1, 1); /*direct input signal access*/
+
 
     if (!ssSetNumOutputPorts(S, NUM_OUTPUTS)) return;
     /* Output Port 0 */
     ssSetOutputPortWidth(S, 0, OUTPUT_0_WIDTH);
     ssSetOutputPortDataType(S, 0, SS_DOUBLE);
     ssSetOutputPortComplexSignal(S, 0, OUTPUT_0_COMPLEX);
+    /* Output Port 1 */
+    ssSetOutputPortWidth(S, 1, OUTPUT_1_WIDTH);
+    ssSetOutputPortDataType(S, 1, SS_DOUBLE);
+    ssSetOutputPortComplexSignal(S, 1, OUTPUT_1_COMPLEX);
     ssSetNumPWork(S, 0);
 
     ssSetNumSampleTimes(S, 1);
@@ -203,6 +250,7 @@ static void mdlInitializeSizes(SimStruct *S)
 
     /* Take care when specifying exception free code - see sfuntmpl_doc.c */
     ssSetOptions(S, (SS_OPTION_EXCEPTION_FREE_CODE |
+                     SS_OPTION_USE_TLC_WITH_ACCELERATOR |
                      SS_OPTION_WORKS_WITH_CODE_REUSE));
 }
 
@@ -272,11 +320,13 @@ static void mdlStart(SimStruct *S)
 static void mdlOutputs(SimStruct *S, int_T tid)
 {
     const real_T *rand = (real_T *) ssGetInputPortRealSignal(S, 0);
-    real_T *y0 = (real_T *) ssGetOutputPortRealSignal(S, 0);
+    const real_T *errQ = (real_T *) ssGetInputPortRealSignal(S, 1);
+    real_T *RemoteQ = (real_T *) ssGetOutputPortRealSignal(S, 0);
+    real_T *SelfQ = (real_T *) ssGetOutputPortRealSignal(S, 1);
     const int_T   p_width0  = mxGetNumberOfElements(PARAM_DEF0(S));
     const real_T *_Ts = (const real_T *) mxGetData(PARAM_DEF0(S));
     
-    acs_angle_Outputs_wrapper(rand, y0, _Ts, p_width0);
+    acs_angle_Outputs_wrapper(rand, errQ, RemoteQ, SelfQ, _Ts, p_width0);
 
 }
 
@@ -288,6 +338,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
  */
 static void mdlTerminate(SimStruct *S)
 {
+    const int_T   p_width0  = mxGetNumberOfElements(PARAM_DEF0(S));
+    const real_T *_Ts = (const real_T *) mxGetData(PARAM_DEF0(S));
+    
+    acs_angle_Terminate_wrapper(_Ts, p_width0);
 
 }
 

@@ -1,5 +1,5 @@
 %% File : acs_angle.tlc
-%% Created : Mon Jul 19 20:54:28 2021
+%% Created : Tue Jul 20 10:49:38 2021
 %%
 %% Description: 
 %%   Simulink Coder wrapper functions interface generated for 
@@ -28,7 +28,9 @@
     extern void acs_angle_Start_wrapper(const real_T *_Ts, const int_T p_width0);
 
     extern void acs_angle_Outputs_wrapper(const real_T *rand,
-			real_T *y0,
+			const real_T *errQ,
+			real_T *RemoteQ,
+			real_T *SelfQ,
 			const real_T *_Ts, const int_T p_width0);
 
     extern void acs_angle_Terminate_wrapper(const real_T *_Ts, const int_T p_width0);
@@ -60,7 +62,9 @@
 %function Outputs(block, system) Output
   %%
   %assign pu0 = LibBlockInputSignalAddr(0, "", "", 0)
+  %assign pu1 = LibBlockInputSignalAddr(1, "", "", 0)
   %assign py0 = LibBlockOutputSignalAddr(0, "", "", 0)
+  %assign py1 = LibBlockOutputSignalAddr(1, "", "", 0)
   %assign nelements1 = LibBlockParameterSize(P1)
   %assign param_width1 = nelements1[0] * nelements1[1]
   %if (param_width1) > 1
@@ -68,10 +72,23 @@
   %else
     %assign pp1 = LibBlockParameterAddr(P1, "", "", 0)
   %endif
-  acs_angle_Outputs_wrapper(%<pu0>, %<py0>, %<pp1>, %<param_width1>);
+  acs_angle_Outputs_wrapper(%<pu0>, %<pu1>, %<py0>, %<py1>, %<pp1>, %<param_width1>);
   %%
 %endfunction
 
+%% Function: Terminate ========================================================
+%%
+%function Terminate(block, system) Output
+   /* %<Type> Block: %<Name> */
+  %assign nelements1 = LibBlockParameterSize(P1)
+  %assign param_width1 = nelements1[0] * nelements1[1]
+  %if (param_width1) > 1
+    %assign pp1 = LibBlockMatrixParameterBaseAddr(P1)
+  %else
+    %assign pp1 = LibBlockParameterAddr(P1, "", "", 0)
+  %endif
+  acs_angle_Terminate_wrapper(%<pp1>, %<param_width1>);
+%endfunction
 
 %% [EOF] acs_angle.tlc
 
